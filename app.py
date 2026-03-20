@@ -5,18 +5,36 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 THE BULLETPROOF VOICE (No API needed, works on iPad)
-def speak(text):
+# 🎤 THE "IPAD-TOUCH" VOICE ENGINE
+def speak_button(text, button_label="🔊 HEAR MISSION"):
     clean_text = text.replace("'", "").replace('"', "")
+    # This creates a button that triggers the browser's voice ONLY when touched
     components.html(f"""
+        <button id="speakBtn" style="
+            width: 100%; 
+            padding: 20px; 
+            background-color: #f9d905; 
+            color: #00529b; 
+            border: 4px solid #00529b; 
+            border-radius: 15px; 
+            font-size: 20px; 
+            font-weight: bold; 
+            cursor: pointer;
+            box-shadow: 5px 5px 0px #e21b22;
+        ">
+            {button_label}
+        </button>
+
         <script>
-            window.speechSynthesis.cancel(); 
-            var msg = new SpeechSynthesisUtterance("{clean_text}");
-            msg.lang = 'en-US';
-            msg.rate = 0.8;
-            window.speechSynthesis.speak(msg);
+            document.getElementById('speakBtn').onclick = function() {{
+                window.speechSynthesis.cancel();
+                var msg = new SpeechSynthesisUtterance("{clean_text}");
+                msg.lang = 'en-US';
+                msg.rate = 0.8;
+                window.speechSynthesis.speak(msg);
+            }};
         </script>
-    """, height=0)
+    """, height=100)
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -38,14 +56,14 @@ st.markdown("""
 
 st.write("")
 
-# --- STEP 1: INTERACTIVE BALI MISSION ---
+# --- STEP 1: PERSONALIZED STORY ---
 topic = st.session_state.current_topic
 if topic == "Swimming":
-    personal_story = "There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
+    story = "Aadya, your mission is Swimming! There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
 else:
-    personal_story = f"I know how much you love {topic}! It is one of your favorite things. How was your day? "
+    story = f"Aadya, your mission is {topic}! I know how much you love this. How was your day? "
 
-mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best!"
+mission_text = story + "Write 1 or 2 sentences in your notebook. I will wait for your photo!"
 
 st.markdown(f"""
 <div style="padding:20px; border-radius:15px; border:2px solid #00529b; background-color:#ffffff; margin-bottom:10px;">
@@ -54,8 +72,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if st.button("📢 Listen to Mission Control"):
-    speak(mission_text)
+# THE BIG YELLOW VOICE BUTTON
+speak_button(mission_text)
 
 # --- STEP 2: UPLOAD ---
 st.write("---")
@@ -63,11 +81,11 @@ uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg'
 
 if uploaded_file and not st.session_state.mission_complete:
     if st.button("🚀 SCAN WRITING"):
-        with st.spinner("🐾 Mission Control is scanning..."):
+        with st.spinner("🐾 Scanning..."):
             time.sleep(2) 
             congrats = f"Wow Aadya! You are a writing superstar! Click below for your surprise."
             st.success(congrats)
-            speak(congrats)
+            speak_button(congrats, "🔊 HEAR CONGRATS")
             st.session_state.mission_complete = True
             st.rerun()
 
@@ -75,10 +93,9 @@ if uploaded_file and not st.session_state.mission_complete:
 if st.session_state.mission_complete:
     if st.button("🌟 CLICK FOR YOUR SURPRISE"):
         st.balloons()
-        # Using a reliable public image link for the reward
         st.image(f"https://loremflickr.com/800/600/{topic},kids", caption=f"Great job Aadya!")
 
-    if st.button("🐾 Start New Mission"):
+    if st.button("🐾 New Mission"):
         st.session_state.mission_complete = False
         st.session_state.current_topic = random.choice(FAVORITES)
         st.rerun()
