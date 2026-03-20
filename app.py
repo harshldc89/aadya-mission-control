@@ -2,7 +2,6 @@ import streamlit as st
 from google import genai
 from google.genai import types
 import random
-import time
 from PIL import Image
 import io
 import streamlit.components.v1 as components
@@ -63,32 +62,35 @@ st.write("---")
 uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    # 📸 FORCE HEAVY COMPRESSION
+    # 📸 EXTREME IMAGE SHRINKING (To stop the slow connection error)
     image = Image.open(uploaded_file)
     if image.mode in ("RGBA", "P"): image = image.convert("RGB")
-    # Resize to max 1000px to ensure tiny file size
-    image.thumbnail((1000, 1000))
+    
+    # Shrink to 800 pixels (plenty for AI to read, but tiny for the internet)
+    image.thumbnail((800, 800))
     img_byte_arr = io.BytesIO()
-    image.save(img_byte_arr, format='JPEG', quality=50) 
+    image.save(img_byte_arr, format='JPEG', quality=40) 
     final_bytes = img_byte_arr.getvalue()
     
-    vision_prompt = f"Identify the handwriting. Be 'Mission Control' for 6-year-old Aadya. Give 2 sentences of high praise for writing about {st.session_state.current_topic}."
-    
     if st.button("🚀 SCAN WRITING"):
-        with st.spinner("🐾 Mission Control is scanning..."):
+        with st.spinner("🐾 Scanning..."):
             try:
-                # Using the absolute fastest model available
+                # Using the absolute fastest model
+                model_id = "gemini-1.5-flash-8b"
+                vision_prompt = f"Identify the handwriting. Be 'Mission Control' for 6-year-old Aadya. Give 2 sentences of praise for her writing about {st.session_state.current_topic}."
+                
                 response = client.models.generate_content(
-                    model="gemini-1.5-flash-8b", 
+                    model=model_id,
                     contents=[vision_prompt, types.Part.from_bytes(data=final_bytes, mime_type='image/jpeg')]
                 )
-                congrats_text = response.text
-                st.success(congrats_text)
-                speak(congrats_text) 
-                st.session_state.mission_complete = True
-                st.rerun() 
+                
+                if response.text:
+                    st.success(response.text)
+                    speak(response.text)
+                    st.session_state.mission_complete = True
+                    st.rerun()
             except Exception as e:
-                st.error("Connection was a bit slow! Please tap 'SCAN WRITING' again.")
+                st.error("The signal is weak! Tap 'SCAN WRITING' one more time.")
 
 # --- STEP 3: REVEAL SURPRISE ---
 if st.session_state.mission_complete:
@@ -98,7 +100,8 @@ if st.session_state.mission_complete:
         topic = st.session_state.current_topic
         with st.spinner("🎨 Creating your gift..."):
             try:
-                prompt = f"A fun 3D Pixar style image of {topic} wearing a Paw Patrol uniform. Bright colors."
+                # Using 2.0-flash for high quality image generation
+                prompt = f"A fun 3D Pixar style image of {topic} wearing a Paw Patrol uniform and a crown. Vibrant colors."
                 img_resp = client.models.generate_content(
                     model='gemini-2.0-flash-exp', 
                     contents=prompt, 
@@ -108,7 +111,7 @@ if st.session_state.mission_complete:
                     if part.inline_data:
                         st.image(part.as_image())
             except:
-                st.warning("The gift is almost ready! Tap the button one more time!")
+                st.warning("Almost there! Tap the button again!")
 
     if st.button("🐾 Start New Mission"):
         st.session_state.mission_complete = False
