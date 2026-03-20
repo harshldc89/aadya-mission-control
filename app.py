@@ -1,7 +1,6 @@
 import streamlit as st
 import random
 import time
-import base64
 from google import genai
 from google.genai import types
 import streamlit.components.v1 as components
@@ -12,12 +11,15 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
+# 🕯️ STAY AWAKE SCRIPT
+components.html("<script>navigator.wakeLock.request('screen');</script>", height=0)
+
 # 🎤 VOICE ENGINE
 def speak(text):
     clean_text = text.replace("'", "").replace('"', "")
     components.html(f"""
         <button id="speakBtn" style="width:100%; padding:15px; background-color:#f9d905; color:#00529b; border:4px solid #00529b; border-radius:12px; font-weight:bold; cursor:pointer; font-size:18px;">
-            🔊 HEAR MISSION CONTROL
+            📢 HEAR MISSION BRIEFING
         </button>
         <script>
             document.getElementById('speakBtn').onclick = function() {{
@@ -30,37 +32,44 @@ def speak(text):
         </script>
     """, height=80)
 
-# MISSION DATA
+# REALISTIC MISSION DATA
 FAVORITES = {
     "Leopard": {
-        "hook": "A fast leopard found a mysterious silver key in the jungle. He needs to know what the key opens!",
-        "video_prompt": "A friendly 3D Pixar style leopard in a jungle using a silver key to open a treasure chest filled with gold, 5 seconds."
+        "hook": "You are a wildlife photographer in the jungle. You just spotted a leopard hiding in the tall grass, watching a colorful bird. What happens next?",
+        "video_prompt": "A realistic 3D Pixar style leopard crouching in tall jungle grass, blinking its eyes and twitching its tail, looking at a tropical bird, 5 seconds."
     },
-    "Whale": {
-        "hook": "A giant blue whale discovered a hidden underwater cave filled with glowing bubbles.",
-        "video_prompt": "A happy 3D Pixar whale swimming through a cave of glowing rainbow bubbles, underwater magic, 5 seconds."
+    "Airplane": {
+        "hook": "You are the pilot of a big airplane. You are flying over a city at night and see millions of tiny lights below. Where are you landing your passengers?",
+        "video_prompt": "A 3D animation of a pilot's view from a cockpit flying over a glowing city at night with city lights and stars, Pixar style, 5 seconds."
     },
     "Swimming": {
-        "hook": "You are at the Bali resort in the infinity pool! Suddenly, a friendly dolphin waves at you.",
-        "video_prompt": "A cute 3D dolphin jumping out of a beautiful infinity pool at a tropical Bali resort, sunset, Pixar style, 5 seconds."
+        "hook": "You are at the Bali resort in the infinity pool. You decide to see how long you can float, and you notice something shiny at the bottom of the pool. What is it?",
+        "video_prompt": "A realistic 3D scene of a beautiful infinity pool in Bali, water rippling, a small golden coin glowing at the bottom, Pixar style, 5 seconds."
     },
-    "Numberblocks": {
-        "hook": "Number Ten is building a giant tower to reach the sun, but he needs one more block!",
-        "video_prompt": "3D Numberblock characters building a glowing block tower towards a smiling sun, bright colors, Pixar style, 5 seconds."
+    "Architecture": {
+        "hook": "You are an architect building a house made entirely of glass and wood. It has a secret room that only you know about. What is in the secret room?",
+        "video_prompt": "A beautiful 3D modern glass house in a forest, the lights inside turn on, showing a cozy secret library, Pixar style, 5 seconds."
+    },
+    "Chef": {
+        "hook": "You are a head chef making a giant pizza for a street party. You have all the cheese and sauce, but you forgot one very special topping. What do you add?",
+        "video_prompt": "A 3D cartoon chef tossing a giant pizza dough in the air in a sunny Italian kitchen, flour puffing, Pixar style, 5 seconds."
+    },
+    "Astronaut": {
+        "hook": "You are on the Moon looking back at Earth. It looks like a small blue marble. You find a strange rock that glows in the dark. What do you do with it?",
+        "video_prompt": "A 3D astronaut on the moon surface holding a glowing purple moon rock, Earth visible in the black sky behind them, Pixar style, 5 seconds."
     }
 }
 
-# --- INITIALIZE MISSION AND PRE-LOAD VIDEO ---
+# --- INITIALIZE AND PRE-LOAD ---
 if 'current_topic' not in st.session_state:
     st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
     st.session_state.mission_complete = False
     st.session_state.video_data = None
 
-# 🚀 THE MAGIC: START GENERATING THE VIDEO IMMEDIATELY
+# PRE-LOAD VIDEO
 if st.session_state.video_data is None:
     topic = st.session_state.current_topic
     try:
-        # Generate the video in the background while she writes
         video_res = client.models.generate_content(
             model='veo', 
             contents=FAVORITES[topic]['video_prompt']
@@ -69,63 +78,60 @@ if st.session_state.video_data is None:
             if part.inline_data:
                 st.session_state.video_data = part.inline_data.data
     except:
-        pass # If it fails, we will retry when she clicks the reward button
+        pass
 
-# --- HEADER & DARK MODE FIX ---
+# --- HEADER (Fixed for Dark Mode) ---
 st.markdown("""
     <style>
         .mission-box {
-            padding: 20px; border-radius: 15px; border: 3px solid #f9d905; 
+            padding: 25px; border-radius: 15px; border: 3px solid #f9d905; 
             background-color: rgba(255, 255, 255, 0.1); margin-top: 20px;
         }
-        .step-text { color: white !important; font-size: 20px; margin-bottom: 12px; }
+        .step-text { color: white !important; font-size: 22px; margin-bottom: 15px; line-height: 1.4; }
     </style>
     <div style="text-align: center; padding: 15px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905;">
-        <h1 style="color: white; margin: 0;">🐾 AADYA MISSION CONTROL 🐾</h1>
+        <h1 style="color: white; margin: 0; letter-spacing: 1px;">🐾 AADYA MISSION CONTROL 🐾</h1>
     </div>
     """, unsafe_allow_html=True)
 
-# --- MISSION STEPS ---
+# --- ONE CLEAR MISSION ---
 topic = st.session_state.current_topic
 story = FAVORITES[topic]
 
 st.markdown(f"""
 <div class="mission-box">
-    <h2 style="color:#f9d905; margin-top:0;">📋 Mission Steps:</h2>
-    <p class="step-text"><b>1. Tell Daddy:</b> How was your day? 👋</p>
-    <p class="step-text"><b>2. Imagine:</b> {story['hook']} ✨</p>
-    <p class="step-text"><b>3. Write:</b> Finish the story in your notebook! ✍️</p>
+    <h2 style="color:#f9d905; margin-top:0;">🌟 Today's Creative Mission:</h2>
+    <p class="step-text"><b>Step 1. Imagine:</b> {story['hook']}</p>
+    <p class="step-text"><b>Step 2. Write:</b> Finish this story in your notebook with 2 sentences!</p>
 </div>
 """, unsafe_allow_html=True)
 
-speak(f"Aadya, Mission Control here! Tell Daddy about your day, then imagine this: {story['hook']}. Write the end in your notebook!")
+speak(f"Aadya, Mission Control here! Imagine this: {story['hook']}. Now, write the ending in your notebook. I can't wait to see what happens!")
 
 # --- UPLOAD ---
 st.write("---")
-uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Mission finished? Take a photo!", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    if st.button("🚀 SUBMIT MISSION"):
+    if st.button("🚀 SUBMIT TO MISSION CONTROL"):
         st.balloons()
         st.session_state.mission_complete = True
         st.rerun()
 
 # --- REVEAL SAVED MOVIE ---
 if st.session_state.mission_complete:
-    st.markdown("<h3 style='color:#f9d905;'>🎉 MISSION COMPLETE!</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#f9d905; text-align:center;'>🎉 MISSION ACCOMPLISHED!</h3>", unsafe_allow_html=True)
     
-    if st.button("🎬 WATCH YOUR MOVIE SURPRISE"):
+    if st.button("🎬 WATCH YOUR STORY MOVIE"):
         if st.session_state.video_data:
             st.video(st.session_state.video_data)
-            st.success("🎬 Enjoy your movie, Aadya!")
+            st.success("🎬 Great writing, Aadya! You finished the story!")
         else:
             with st.spinner("🎥 Movie is almost ready..."):
-                # Fallback if pre-loading was slow
                 time.sleep(5)
-                st.info("Tap the button again to play!")
+                st.info("Tap the button one more time to play!")
 
-    if st.button("🐾 Next Mission"):
-        # Reset everything for the next mission
+    if st.button("🐾 Start New Mission"):
         st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
         st.session_state.mission_complete = False
         st.session_state.video_data = None
