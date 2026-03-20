@@ -52,6 +52,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# Add a manual button to trigger the voice if it doesn't auto-play
+if st.button("🔊 Listen to Mission Control"):
+    speak(mission_text)
+
 if not st.session_state.has_spoken_mission:
     speak(mission_text)
     st.session_state.has_spoken_mission = True
