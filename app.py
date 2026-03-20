@@ -2,37 +2,33 @@ import streamlit as st
 import random
 import time
 import base64
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 import streamlit.components.v1 as components
 
 # 1. API CONFIGURATION
 API_KEY = st.secrets["GEMINI_API_KEY"]
-client = genai.Client(api_key=API_KEY)
+genai.configure(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 ROBUST GEMINI VOICE FUNCTION
+# 🎤 ROBUST VOICE FUNCTION
 def speak_gemini(text):
     try:
-        # Generate the high-quality speech
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            config=types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=types.SpeechConfig(
-                    voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Puck")
-                    )
-                )
-            ),
+        # Using the stable generativeai library for audio
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # Requesting audio directly
+        response = model.generate_content(
             contents=text,
+            generation_config=genai.types.GenerationConfig(
+                response_modalities=["AUDIO"]
+            )
         )
         
-        for part in response.parts:
+        # Find the audio data in the response
+        for part in response.candidates[0].content.parts:
             if part.inline_data:
                 audio_base64 = base64.b64encode(part.inline_data.data).decode('utf-8')
-                # Custom HTML to force play on iPad
                 components.html(f"""
                     <script>
                         var audio = new Audio("data:audio/wav;base64,{audio_base64}");
@@ -40,7 +36,8 @@ def speak_gemini(text):
                     </script>
                 """, height=0)
     except Exception as e:
-        st.error("Mission Control voice is recharging, but I'm still here!")
+        # If it fails, show the real error so we can fix it!
+        st.warning(f"Voice is taking a break. (Error: {str(e)[:50]})")
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -64,8 +61,6 @@ st.write("")
 
 # --- STEP 1: INTERACTIVE BALI MISSION ---
 topic = st.session_state.current_topic
-
-# PERSONALIZED LOGIC
 if topic == "Swimming":
     intro = f"Aadya, your mission today is Swimming! There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
 else:
