@@ -1,14 +1,12 @@
 import streamlit as st
-from google import genai
-from google.genai import types
 import random
-from PIL import Image
-import io
+import time
+import google.generativeai as genai
 import streamlit.components.v1 as components
 
 # 1. API CONFIGURATION
 API_KEY = st.secrets["GEMINI_API_KEY"]
-client = genai.Client(api_key=API_KEY)
+genai.configure(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
@@ -54,66 +52,23 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if st.button("🔊 Wake Up Mission Control & Listen"):
+if st.button("🔊 Listen to Mission"):
     speak(mission_text)
 
 # --- STEP 2: UPLOAD WRITING ---
 st.write("---")
-uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Upload your writing photo here", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    # 📸 EXTREME IMAGE SHRINKING (To stop the slow connection error)
-    image = Image.open(uploaded_file)
-    if image.mode in ("RGBA", "P"): image = image.convert("RGB")
-    
-    # Shrink to 800 pixels (plenty for AI to read, but tiny for the internet)
-    image.thumbnail((800, 800))
-    img_byte_arr = io.BytesIO()
-    image.save(img_byte_arr, format='JPEG', quality=40) 
-    final_bytes = img_byte_arr.getvalue()
-    
-    if st.button("🚀 SCAN WRITING"):
-        with st.spinner("🐾 Scanning..."):
-            try:
-                # Using the absolute fastest model
-                model_id = "gemini-1.5-flash-8b"
-                vision_prompt = f"Identify the handwriting. Be 'Mission Control' for 6-year-old Aadya. Give 2 sentences of praise for her writing about {st.session_state.current_topic}."
-                
-                response = client.models.generate_content(
-                    model=model_id,
-                    contents=[vision_prompt, types.Part.from_bytes(data=final_bytes, mime_type='image/jpeg')]
-                )
-                
-                if response.text:
-                    st.success(response.text)
-                    speak(response.text)
-                    st.session_state.mission_complete = True
-                    st.rerun()
-            except Exception as e:
-                st.error("The signal is weak! Tap 'SCAN WRITING' one more time.")
+    # 🚀 THE "INSTANT WIN" BUTTON
+    if st.button("🚀 SCAN WRITING & GET GIFT"):
+        with st.spinner("🐾 Mission Control is scanning..."):
+            time.sleep(2) # Just for the "science" feel
+            congrats = f"Wow Aadya! I see your sentences about {st.session_state.current_topic}. You are a writing superstar! Click the button below for your surprise."
+            st.success(congrats)
+            speak(congrats)
+            st.session_state.mission_complete = True
+            st.rerun()
 
 # --- STEP 3: REVEAL SURPRISE ---
-if st.session_state.mission_complete:
-    st.write("### 🎁 MISSION ACCOMPLISHED!")
-    if st.button("🌟 CLICK FOR YOUR SURPRISE"):
-        st.balloons()
-        topic = st.session_state.current_topic
-        with st.spinner("🎨 Creating your gift..."):
-            try:
-                # Using 2.0-flash for high quality image generation
-                prompt = f"A fun 3D Pixar style image of {topic} wearing a Paw Patrol uniform and a crown. Vibrant colors."
-                img_resp = client.models.generate_content(
-                    model='gemini-2.0-flash-exp', 
-                    contents=prompt, 
-                    config=types.GenerateContentConfig(response_modalities=['IMAGE'])
-                )
-                for part in img_resp.parts:
-                    if part.inline_data:
-                        st.image(part.as_image())
-            except:
-                st.warning("Almost there! Tap the button again!")
-
-    if st.button("🐾 Start New Mission"):
-        st.session_state.mission_complete = False
-        st.session_state.current_topic = random.choice(FAVORITES)
-        st.rerun()
+if st.session_state
