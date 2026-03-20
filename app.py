@@ -2,33 +2,37 @@ import streamlit as st
 import random
 import time
 import base64
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import streamlit.components.v1 as components
 
 # 1. API CONFIGURATION
 API_KEY = st.secrets["GEMINI_API_KEY"]
-genai.configure(api_key=API_KEY)
+client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 ROBUST VOICE FUNCTION
+# 🎤 THE FIX: ROBUST GEMINI VOICE
 def speak_gemini(text):
     try:
-        # Using the stable generativeai library for audio
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        
-        # Requesting audio directly
-        response = model.generate_content(
+        # Generate high-quality audio using the modern 2.0 Flash model
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Puck")
+                    )
+                )
+            ),
             contents=text,
-            generation_config=genai.types.GenerationConfig(
-                response_modalities=["AUDIO"]
-            )
         )
         
-        # Find the audio data in the response
-        for part in response.candidates[0].content.parts:
+        for part in response.parts:
             if part.inline_data:
                 audio_base64 = base64.b64encode(part.inline_data.data).decode('utf-8')
+                # iPad-friendly Javascript trigger
                 components.html(f"""
                     <script>
                         var audio = new Audio("data:audio/wav;base64,{audio_base64}");
@@ -36,8 +40,7 @@ def speak_gemini(text):
                     </script>
                 """, height=0)
     except Exception as e:
-        # If it fails, show the real error so we can fix it!
-        st.warning(f"Voice is taking a break. (Error: {str(e)[:50]})")
+        st.warning("Mission Control is a bit quiet today. Let's keep going anyway!")
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -59,14 +62,15 @@ st.markdown("""
 
 st.write("")
 
-# --- STEP 1: INTERACTIVE BALI MISSION ---
+# --- STEP 1: INTERACTIVE MISSION BRIEFING ---
 topic = st.session_state.current_topic
-if topic == "Swimming":
-    intro = f"Aadya, your mission today is Swimming! There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
-else:
-    intro = f"Aadya, your mission today is {topic}! I know how much you love this. How was your day? "
 
-mission_text = intro + "Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded!"
+# PERSONALIZED STORY LOGIC
+personal_story = "How was your day? "
+if topic == "Swimming":
+    personal_story = "There is a resort which we are going to in Bali where you love to swim around the beach facing infinity pool! How was your day? "
+
+mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded!"
 
 st.markdown(f"""
 <div style="padding:20px; border-radius:15px; border:2px solid #00529b; background-color:#ffffff; margin-bottom:10px;">
@@ -81,11 +85,11 @@ if st.button("📢 Listen to Mission Control"):
 
 # --- STEP 2: UPLOAD ---
 st.write("---")
-uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
     if st.button("🚀 SCAN WRITING"):
-        with st.spinner("🐾 Scanning..."):
+        with st.spinner("🐾 Mission Control is scanning..."):
             time.sleep(2) 
             congrats = f"Wow Aadya! I see your sentences about {topic}. You are a writing superstar!"
             st.success(congrats)
