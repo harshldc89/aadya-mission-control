@@ -4,7 +4,6 @@ import time
 import base64
 from google import genai
 from google.genai import types
-import streamlit.components.v1 as components
 
 # 1. API CONFIGURATION
 API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -12,11 +11,9 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 THE IPAD-STABLE VOICE ENGINE
-def speak(text):
-    clean_text = text.replace("'", "").replace('"', "")
+# 🎤 NATIVE AUDIO ENGINE (Works on all iPads)
+def speak_gemini(text):
     try:
-        # Request high-quality Gemini Audio
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
@@ -30,39 +27,13 @@ def speak(text):
             contents=text,
         )
         
-        audio_data = None
         for part in response.parts:
             if part.inline_data:
-                audio_data = base64.b64encode(part.inline_data.data).decode('utf-8')
-        
-        if audio_data:
-            # This specific JS structure is the most reliable for iPad buttons
-            components.html(f"""
-                <div style="text-align:center;">
-                    <button id="playBtn" style="background-color:#f9d905; border:3px solid #00529b; padding:15px; border-radius:12px; font-weight:bold; font-size:18px; width:100%; color:#00529b;">
-                        📢 LISTEN TO MISSION
-                    </button>
-                </div>
-                <script>
-                    document.getElementById('playBtn').onclick = function() {{
-                        var audio = new Audio("data:audio/wav;base64,{audio_data}");
-                        audio.play();
-                    }};
-                    // Also try to auto-play
-                    setTimeout(function(){{
-                        var audio = new Audio("data:audio/wav;base64,{audio_data}");
-                        audio.play().catch(e => console.log("Auto-play blocked"));
-                    }}, 500);
-                </script>
-            """, height=80)
-    except:
-        # Browser Voice Fallback
-        st.button("🔊 Play System Voice", on_click=lambda: components.html(f"""
-            <script>
-                var msg = new SpeechSynthesisUtterance("{clean_text}");
-                window.speechSynthesis.speak(msg);
-            </script>
-        """, height=0))
+                # This creates a standard iPad-compatible audio player
+                st.audio(part.inline_data.data, format="audio/wav")
+                st.caption("Tap the Play button above to hear Mission Control!")
+    except Exception as e:
+        st.error("Mission Control is a bit quiet. Please try again in a moment!")
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -86,10 +57,9 @@ st.write("")
 
 # --- STEP 1: INTERACTIVE BALI MISSION ---
 topic = st.session_state.current_topic
+personal_story = "How was your day? "
 if topic == "Swimming":
     personal_story = "There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
-else:
-    personal_story = f"I know how much you love {topic}! It is one of your favorite things. How was your day? "
 
 mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best!"
 
@@ -100,8 +70,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Generate and show the Audio Button
-speak(mission_text)
+# THE AUDIO BUTTON
+if st.button("📢 Get Voice Briefing"):
+    with st.spinner("Preparing briefing..."):
+        speak_gemini(mission_text)
 
 # --- STEP 2: UPLOAD ---
 st.write("---")
@@ -109,11 +81,11 @@ uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg'
 
 if uploaded_file and not st.session_state.mission_complete:
     if st.button("🚀 SCAN WRITING & GET SURPRISE"):
-        with st.spinner("🐾 Mission Control is scanning..."):
+        with st.spinner("🐾 Scanning..."):
             time.sleep(2) 
             congrats = f"Wow Aadya! You are a writing superstar! Click below for your surprise."
             st.success(congrats)
-            speak(congrats)
+            speak_gemini(congrats)
             st.session_state.mission_complete = True
             st.rerun()
 
