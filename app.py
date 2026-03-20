@@ -12,10 +12,11 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 THE FIX: ROBUST GEMINI VOICE
-def speak_gemini(text):
+# 🎤 HYBRID VOICE FUNCTION (Gemini + Browser Fallback)
+def speak(text):
+    clean_text = text.replace("'", "").replace('"', "")
     try:
-        # Generate high-quality audio using the modern 2.0 Flash model
+        # Try to get the high-quality Gemini voice first
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
@@ -28,19 +29,33 @@ def speak_gemini(text):
             ),
             contents=text,
         )
-        
+        audio_data = None
         for part in response.parts:
             if part.inline_data:
-                audio_base64 = base64.b64encode(part.inline_data.data).decode('utf-8')
-                # iPad-friendly Javascript trigger
-                components.html(f"""
-                    <script>
-                        var audio = new Audio("data:audio/wav;base64,{audio_base64}");
-                        audio.play();
-                    </script>
-                """, height=0)
-    except Exception as e:
-        st.warning("Mission Control is a bit quiet today. Let's keep going anyway!")
+                audio_data = base64.b64encode(part.inline_data.data).decode('utf-8')
+        
+        if audio_data:
+            components.html(f"""
+                <script>
+                    var audio = new Audio("data:audio/wav;base64,{audio_data}");
+                    audio.play().catch(function() {{
+                        var msg = new SpeechSynthesisUtterance("{clean_text}");
+                        window.speechSynthesis.speak(msg);
+                    }});
+                </script>
+            """, height=0)
+        else:
+            raise Exception("No audio data")
+            
+    except:
+        # Fallback to browser voice if Gemini voice fails
+        components.html(f"""
+            <script>
+                var msg = new SpeechSynthesisUtterance("{clean_text}");
+                msg.lang = 'en-US';
+                window.speechSynthesis.speak(msg);
+            </script>
+        """, height=0)
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -64,11 +79,9 @@ st.write("")
 
 # --- STEP 1: INTERACTIVE MISSION BRIEFING ---
 topic = st.session_state.current_topic
-
-# PERSONALIZED STORY LOGIC
 personal_story = "How was your day? "
 if topic == "Swimming":
-    personal_story = "There is a resort which we are going to in Bali where you love to swim around the beach facing infinity pool! How was your day? "
+    personal_story = "There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
 
 mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded!"
 
@@ -80,8 +93,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 if st.button("📢 Listen to Mission Control"):
-    with st.spinner("Preparing briefing..."):
-        speak_gemini(mission_text)
+    speak(mission_text)
 
 # --- STEP 2: UPLOAD ---
 st.write("---")
@@ -89,11 +101,11 @@ uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png
 
 if uploaded_file and not st.session_state.mission_complete:
     if st.button("🚀 SCAN WRITING"):
-        with st.spinner("🐾 Mission Control is scanning..."):
+        with st.spinner("🐾 Scanning..."):
             time.sleep(2) 
             congrats = f"Wow Aadya! I see your sentences about {topic}. You are a writing superstar!"
             st.success(congrats)
-            speak_gemini(congrats)
+            speak(congrats)
             st.session_state.mission_complete = True
             st.rerun()
 
