@@ -63,28 +63,32 @@ st.write("---")
 uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    # 📸 IMAGE COMPRESSION (To stop the 'Recharging' error)
+    # 📸 FORCE HEAVY COMPRESSION
     image = Image.open(uploaded_file)
     if image.mode in ("RGBA", "P"): image = image.convert("RGB")
+    # Resize to max 1000px to ensure tiny file size
+    image.thumbnail((1000, 1000))
     img_byte_arr = io.BytesIO()
-    image.save(img_byte_arr, format='JPEG', quality=60) # Compress to 60% quality
+    image.save(img_byte_arr, format='JPEG', quality=50) 
     final_bytes = img_byte_arr.getvalue()
     
     vision_prompt = f"Identify the handwriting. Be 'Mission Control' for 6-year-old Aadya. Give 2 sentences of high praise for writing about {st.session_state.current_topic}."
     
-    with st.spinner("🐾 Scanning scientific data..."):
-        try:
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=[vision_prompt, types.Part.from_bytes(data=final_bytes, mime_type='image/jpeg')]
-            )
-            congrats_text = response.text
-            st.success(congrats_text)
-            speak(congrats_text) 
-            st.session_state.mission_complete = True
-            st.rerun() 
-        except Exception as e:
-            st.error("Mission Control is recharging! Please click the Browse button and try one more time.")
+    if st.button("🚀 SCAN WRITING"):
+        with st.spinner("🐾 Mission Control is scanning..."):
+            try:
+                # Using the absolute fastest model available
+                response = client.models.generate_content(
+                    model="gemini-1.5-flash-8b", 
+                    contents=[vision_prompt, types.Part.from_bytes(data=final_bytes, mime_type='image/jpeg')]
+                )
+                congrats_text = response.text
+                st.success(congrats_text)
+                speak(congrats_text) 
+                st.session_state.mission_complete = True
+                st.rerun() 
+            except Exception as e:
+                st.error("Connection was a bit slow! Please tap 'SCAN WRITING' again.")
 
 # --- STEP 3: REVEAL SURPRISE ---
 if st.session_state.mission_complete:
@@ -92,9 +96,9 @@ if st.session_state.mission_complete:
     if st.button("🌟 CLICK FOR YOUR SURPRISE"):
         st.balloons()
         topic = st.session_state.current_topic
-        with st.spinner("🎨 Creating your Paw Patrol style gift..."):
+        with st.spinner("🎨 Creating your gift..."):
             try:
-                prompt = f"A high-quality 3D Disney Pixar style image of {topic} wearing a Paw Patrol uniform and a crown. Vibrant colors, happy mood."
+                prompt = f"A fun 3D Pixar style image of {topic} wearing a Paw Patrol uniform. Bright colors."
                 img_resp = client.models.generate_content(
                     model='gemini-2.0-flash-exp', 
                     contents=prompt, 
@@ -102,9 +106,9 @@ if st.session_state.mission_complete:
                 )
                 for part in img_resp.parts:
                     if part.inline_data:
-                        st.image(part.as_image(), caption=f"A Special Surprise for Aadya!")
+                        st.image(part.as_image())
             except:
-                st.warning("The gift is being wrapped! Click one more time!")
+                st.warning("The gift is almost ready! Tap the button one more time!")
 
     if st.button("🐾 Start New Mission"):
         st.session_state.mission_complete = False
