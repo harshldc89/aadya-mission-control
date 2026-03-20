@@ -4,6 +4,7 @@ import time
 import base64
 from google import genai
 from google.genai import types
+import streamlit.components.v1 as components
 
 # 1. API CONFIGURATION
 API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -11,33 +12,35 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 GEMINI HIGH-QUALITY VOICE FUNCTION
+# 🎤 ROBUST GEMINI VOICE FUNCTION
 def speak_gemini(text):
     try:
-        # This tells Gemini to turn the text into a high-quality speech file
+        # Generate the high-quality speech
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
                     voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                            voice_name="Puck" # "Puck" is a friendly, warm voice perfect for this
-                        )
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Puck")
                     )
                 )
             ),
             contents=text,
         )
         
-        # Get the audio data
         for part in response.parts:
             if part.inline_data:
                 audio_base64 = base64.b64encode(part.inline_data.data).decode('utf-8')
-                audio_tag = f'<audio autoplay="true" src="data:audio/wav;base64,{audio_base64}">'
-                st.markdown(audio_tag, unsafe_allow_html=True)
+                # Custom HTML to force play on iPad
+                components.html(f"""
+                    <script>
+                        var audio = new Audio("data:audio/wav;base64,{audio_base64}");
+                        audio.play();
+                    </script>
+                """, height=0)
     except Exception as e:
-        st.error("Mission Control voice is offline, but the mission continues!")
+        st.error("Mission Control voice is recharging, but I'm still here!")
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -59,14 +62,16 @@ st.markdown("""
 
 st.write("")
 
-# --- STEP 1: INTERACTIVE MISSION BRIEFING ---
+# --- STEP 1: INTERACTIVE BALI MISSION ---
 topic = st.session_state.current_topic
-if topic == "Swimming":
-    personal_story = "There is a resort which we are going to in Bali where you love to swim around the beach facing infinity pool! How was your day? "
-else:
-    personal_story = f"I know how much you love {topic}! It is one of your favorite things in the whole world. How was your day? "
 
-mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded!"
+# PERSONALIZED LOGIC
+if topic == "Swimming":
+    intro = f"Aadya, your mission today is Swimming! There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
+else:
+    intro = f"Aadya, your mission today is {topic}! I know how much you love this. How was your day? "
+
+mission_text = intro + "Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded!"
 
 st.markdown(f"""
 <div style="padding:20px; border-radius:15px; border:2px solid #00529b; background-color:#ffffff; margin-bottom:10px;">
@@ -75,32 +80,29 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 🔊 CLICK TO HEAR THE REAL GEMINI VOICE
 if st.button("📢 Listen to Mission Control"):
-    with st.spinner("Mission Control is preparing the briefing..."):
+    with st.spinner("Preparing briefing..."):
         speak_gemini(mission_text)
 
-# --- STEP 2: UPLOAD WRITING ---
+# --- STEP 2: UPLOAD ---
 st.write("---")
-uploaded_file = st.file_uploader("📷 Upload your writing photo here", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    if st.button("🚀 SCAN WRITING & GET GIFT"):
-        with st.spinner("🐾 Mission Control is scanning..."):
+    if st.button("🚀 SCAN WRITING"):
+        with st.spinner("🐾 Scanning..."):
             time.sleep(2) 
-            congrats = f"Wow Aadya! I see your sentences about {topic}. You are a writing superstar! Click the button below for your surprise."
+            congrats = f"Wow Aadya! I see your sentences about {topic}. You are a writing superstar!"
             st.success(congrats)
-            speak_gemini(congrats) # Also speaks the congrats in the nice voice
+            speak_gemini(congrats)
             st.session_state.mission_complete = True
             st.rerun()
 
-# --- STEP 3: REVEAL SURPRISE ---
+# --- STEP 3: REVEAL ---
 if st.session_state.mission_complete:
-    st.write("### 🎁 MISSION ACCOMPLISHED!")
     if st.button("🌟 CLICK FOR YOUR SURPRISE"):
         st.balloons()
-        topic = st.session_state.current_topic
-        st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"A Special {topic} for Aadya!")
+        st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"Great job Aadya!")
 
     if st.button("🐾 Start New Mission"):
         st.session_state.mission_complete = False
