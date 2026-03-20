@@ -12,11 +12,11 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 HYBRID VOICE FUNCTION (Gemini + Browser Fallback)
+# 🎤 THE IPAD-STABLE VOICE ENGINE
 def speak(text):
     clean_text = text.replace("'", "").replace('"', "")
     try:
-        # Try to get the high-quality Gemini voice first
+        # Request high-quality Gemini Audio
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
@@ -29,33 +29,40 @@ def speak(text):
             ),
             contents=text,
         )
+        
         audio_data = None
         for part in response.parts:
             if part.inline_data:
                 audio_data = base64.b64encode(part.inline_data.data).decode('utf-8')
         
         if audio_data:
+            # This specific JS structure is the most reliable for iPad buttons
             components.html(f"""
+                <div style="text-align:center;">
+                    <button id="playBtn" style="background-color:#f9d905; border:3px solid #00529b; padding:15px; border-radius:12px; font-weight:bold; font-size:18px; width:100%; color:#00529b;">
+                        📢 LISTEN TO MISSION
+                    </button>
+                </div>
                 <script>
-                    var audio = new Audio("data:audio/wav;base64,{audio_data}");
-                    audio.play().catch(function() {{
-                        var msg = new SpeechSynthesisUtterance("{clean_text}");
-                        window.speechSynthesis.speak(msg);
-                    }});
+                    document.getElementById('playBtn').onclick = function() {{
+                        var audio = new Audio("data:audio/wav;base64,{audio_data}");
+                        audio.play();
+                    }};
+                    // Also try to auto-play
+                    setTimeout(function(){{
+                        var audio = new Audio("data:audio/wav;base64,{audio_data}");
+                        audio.play().catch(e => console.log("Auto-play blocked"));
+                    }}, 500);
                 </script>
-            """, height=0)
-        else:
-            raise Exception("No audio data")
-            
+            """, height=80)
     except:
-        # Fallback to browser voice if Gemini voice fails
-        components.html(f"""
+        # Browser Voice Fallback
+        st.button("🔊 Play System Voice", on_click=lambda: components.html(f"""
             <script>
                 var msg = new SpeechSynthesisUtterance("{clean_text}");
-                msg.lang = 'en-US';
                 window.speechSynthesis.speak(msg);
             </script>
-        """, height=0)
+        """, height=0))
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -77,13 +84,14 @@ st.markdown("""
 
 st.write("")
 
-# --- STEP 1: INTERACTIVE MISSION BRIEFING ---
+# --- STEP 1: INTERACTIVE BALI MISSION ---
 topic = st.session_state.current_topic
-personal_story = "How was your day? "
 if topic == "Swimming":
     personal_story = "There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
+else:
+    personal_story = f"I know how much you love {topic}! It is one of your favorite things. How was your day? "
 
-mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded!"
+mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best!"
 
 st.markdown(f"""
 <div style="padding:20px; border-radius:15px; border:2px solid #00529b; background-color:#ffffff; margin-bottom:10px;">
@@ -92,18 +100,18 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if st.button("📢 Listen to Mission Control"):
-    speak(mission_text)
+# Generate and show the Audio Button
+speak(mission_text)
 
 # --- STEP 2: UPLOAD ---
 st.write("---")
-uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    if st.button("🚀 SCAN WRITING"):
-        with st.spinner("🐾 Scanning..."):
+    if st.button("🚀 SCAN WRITING & GET SURPRISE"):
+        with st.spinner("🐾 Mission Control is scanning..."):
             time.sleep(2) 
-            congrats = f"Wow Aadya! I see your sentences about {topic}. You are a writing superstar!"
+            congrats = f"Wow Aadya! You are a writing superstar! Click below for your surprise."
             st.success(congrats)
             speak(congrats)
             st.session_state.mission_complete = True
