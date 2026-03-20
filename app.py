@@ -4,6 +4,7 @@ from google.genai import types
 import random
 import time
 from PIL import Image
+import io
 import streamlit.components.v1 as components
 
 # 1. API CONFIGURATION
@@ -34,7 +35,7 @@ if 'mission_complete' not in st.session_state:
 
 # --- PAW PATROL STYLE LOGO HEADER ---
 st.markdown("""
-    <div style="text-align: center; padding: 10px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905; box-shadow: 10px 10px 0px #00529b;">
+    <div style="text-align: center; padding: 15px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905; box-shadow: 10px 10px 0px #00529b;">
         <h1 style="color: white; font-family: 'Arial Black', sans-serif; text-transform: uppercase; letter-spacing: 2px; margin: 0; -webkit-text-stroke: 1px #00529b;">
             🐾 AADYA 🐾
         </h1>
@@ -54,7 +55,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 🔊 VOICE BUTTON
 if st.button("🔊 Wake Up Mission Control & Listen"):
     speak(mission_text)
 
@@ -63,16 +63,20 @@ st.write("---")
 uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    image_bytes = uploaded_file.getvalue()
-    vision_prompt = f"Identify the handwriting in this image. As 'Mission Control', give Aadya (6 years old) 2 sentences of praise about her writing on {st.session_state.current_topic}. Mention her great effort!"
+    # 📸 IMAGE COMPRESSION (To stop the 'Recharging' error)
+    image = Image.open(uploaded_file)
+    if image.mode in ("RGBA", "P"): image = image.convert("RGB")
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format='JPEG', quality=60) # Compress to 60% quality
+    final_bytes = img_byte_arr.getvalue()
+    
+    vision_prompt = f"Identify the handwriting. Be 'Mission Control' for 6-year-old Aadya. Give 2 sentences of high praise for writing about {st.session_state.current_topic}."
     
     with st.spinner("🐾 Scanning scientific data..."):
         try:
-            # Use 1.5-flash for more stable handwriting recognition
-            model_id = "gemini-1.5-flash"
             response = client.models.generate_content(
-                model=model_id,
-                contents=[vision_prompt, types.Part.from_bytes(data=image_bytes, mime_type='image/jpeg')]
+                model="gemini-1.5-flash",
+                contents=[vision_prompt, types.Part.from_bytes(data=final_bytes, mime_type='image/jpeg')]
             )
             congrats_text = response.text
             st.success(congrats_text)
@@ -80,7 +84,7 @@ if uploaded_file and not st.session_state.mission_complete:
             st.session_state.mission_complete = True
             st.rerun() 
         except Exception as e:
-            st.error(f"Mission Control is recharging! Please try uploading one more time.")
+            st.error("Mission Control is recharging! Please click the Browse button and try one more time.")
 
 # --- STEP 3: REVEAL SURPRISE ---
 if st.session_state.mission_complete:
