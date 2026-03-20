@@ -1,12 +1,13 @@
 import streamlit as st
 import random
 import time
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import streamlit.components.v1 as components
 
 # 1. API CONFIGURATION
 API_KEY = st.secrets["GEMINI_API_KEY"]
-genai.configure(api_key=API_KEY)
+client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
@@ -43,7 +44,7 @@ st.markdown("""
 st.write("")
 
 # --- STEP 1: MISSION BRIEFING ---
-mission_text = f"Todays Mission is {st.session_state.current_topic}. Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded."
+mission_text = f"Today's Mission is {st.session_state.current_topic}. Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded."
 
 st.markdown(f"""
 <div style="padding:20px; border-radius:15px; border:2px solid #00529b; background-color:#ffffff; margin-bottom:10px;">
@@ -60,7 +61,7 @@ st.write("---")
 uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    # INSTANT WIN BUTTON - No AI scanning errors!
+    # INSTANT WIN - No complex AI scan that causes hiccups
     if st.button("🚀 SCAN WRITING & GET GIFT"):
         with st.spinner("🐾 Mission Control is scanning..."):
             time.sleep(2) 
@@ -77,15 +78,21 @@ if st.session_state.mission_complete:
         st.balloons()
         topic = st.session_state.current_topic
         
-        with st.spinner("🎨 Creating your Paw Patrol style gift..."):
-            # This generates the fun reward image
+        with st.spinner("🎨 Creating your gift..."):
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                prompt = f"A fun 3D Pixar style image of {topic} wearing a Paw Patrol uniform and a crown. Vibrant colors."
-                response = model.generate_content(prompt)
-                st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"A Special {topic} for Aadya!")
+                # This uses the new library to generate the image
+                prompt = f"A cute 3D Pixar style image of {topic} wearing a Paw Patrol uniform. Bright colors."
+                response = client.models.generate_content(
+                    model='gemini-2.0-flash-exp', 
+                    contents=prompt, 
+                    config=types.GenerateContentConfig(response_modalities=['IMAGE'])
+                )
+                for part in response.parts:
+                    if part.inline_data:
+                        st.image(part.as_image(), caption=f"Great job Aadya!")
             except:
-                st.image(f"https://loremflickr.com/800/600/{topic}", caption=f"Great job Aadya!")
+                # Backup if the AI image is too slow
+                st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"Surprise for Aadya!")
 
     if st.button("🐾 Start New Mission"):
         st.session_state.mission_complete = False
