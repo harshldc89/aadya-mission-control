@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 import time
+import base64
 from google import genai
 from google.genai import types
 import streamlit.components.v1 as components
@@ -9,11 +10,7 @@ import streamlit.components.v1 as components
 API_KEY = st.secrets["GEMINI_API_KEY"]
 client = genai.Client(api_key=API_KEY)
 
-# Force a friendly theme
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
-
-# 🕯️ STAY AWAKE SCRIPT
-components.html("<script>navigator.wakeLock.request('screen');</script>", height=0)
 
 # 🎤 VOICE ENGINE
 def speak(text):
@@ -37,7 +34,7 @@ def speak(text):
 FAVORITES = {
     "Leopard": {
         "hook": "A fast leopard found a mysterious silver key in the jungle. He needs to know what the key opens!",
-        "video_prompt": "A friendly 3D Pixar style leopard in a jungle using a silver key to open a treasure chest filled with gold, cinematic lighting, 5 seconds."
+        "video_prompt": "A friendly 3D Pixar style leopard in a jungle using a silver key to open a treasure chest filled with gold, 5 seconds."
     },
     "Whale": {
         "hook": "A giant blue whale discovered a hidden underwater cave filled with glowing bubbles.",
@@ -49,30 +46,39 @@ FAVORITES = {
     },
     "Numberblocks": {
         "hook": "Number Ten is building a giant tower to reach the sun, but he needs one more block!",
-        "video_prompt": "A 3D Numberblock building a glowing tower that reaches up to a smiling sun, bright colors, Pixar style, 5 seconds."
+        "video_prompt": "3D Numberblock characters building a glowing block tower towards a smiling sun, bright colors, Pixar style, 5 seconds."
     }
 }
 
+# --- INITIALIZE MISSION AND PRE-LOAD VIDEO ---
 if 'current_topic' not in st.session_state:
     st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
-if 'mission_complete' not in st.session_state:
     st.session_state.mission_complete = False
+    st.session_state.video_data = None
 
-# --- HEADER (Fixed for Dark Mode) ---
+# 🚀 THE MAGIC: START GENERATING THE VIDEO IMMEDIATELY
+if st.session_state.video_data is None:
+    topic = st.session_state.current_topic
+    try:
+        # Generate the video in the background while she writes
+        video_res = client.models.generate_content(
+            model='veo', 
+            contents=FAVORITES[topic]['video_prompt']
+        )
+        for part in video_res.parts:
+            if part.inline_data:
+                st.session_state.video_data = part.inline_data.data
+    except:
+        pass # If it fails, we will retry when she clicks the reward button
+
+# --- HEADER & DARK MODE FIX ---
 st.markdown("""
     <style>
         .mission-box {
-            padding: 20px; 
-            border-radius: 15px; 
-            border: 3px solid #f9d905; 
-            background-color: rgba(255, 255, 255, 0.1); 
-            margin-top: 20px;
+            padding: 20px; border-radius: 15px; border: 3px solid #f9d905; 
+            background-color: rgba(255, 255, 255, 0.1); margin-top: 20px;
         }
-        .step-text {
-            color: white !important;
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
+        .step-text { color: white !important; font-size: 20px; margin-bottom: 12px; }
     </style>
     <div style="text-align: center; padding: 15px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905;">
         <h1 style="color: white; margin: 0;">🐾 AADYA MISSION CONTROL 🐾</h1>
@@ -100,32 +106,27 @@ uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg'
 
 if uploaded_file and not st.session_state.mission_complete:
     if st.button("🚀 SUBMIT MISSION"):
-        with st.spinner("🐾 Scanning..."):
-            time.sleep(2) 
-            st.balloons()
-            st.session_state.mission_complete = True
-            st.rerun()
+        st.balloons()
+        st.session_state.mission_complete = True
+        st.rerun()
 
-# --- REVEAL MOVIE REWARD ---
+# --- REVEAL SAVED MOVIE ---
 if st.session_state.mission_complete:
     st.markdown("<h3 style='color:#f9d905;'>🎉 MISSION COMPLETE!</h3>", unsafe_allow_html=True)
+    
     if st.button("🎬 WATCH YOUR MOVIE SURPRISE"):
-        with st.spinner("🎥 Filming your story ending..."):
-            try:
-                # Generate Video using Veo
-                # In this specific implementation, we use the generate_content for video
-                video_res = client.models.generate_content(
-                    model='veo', 
-                    contents=story['video_prompt']
-                )
-                # Render the generated video
-                for part in video_res.parts:
-                    if part.inline_data:
-                        st.video(part.inline_data.data)
-            except:
-                st.info("The movie is being developed! Tap again in 5 seconds.")
+        if st.session_state.video_data:
+            st.video(st.session_state.video_data)
+            st.success("🎬 Enjoy your movie, Aadya!")
+        else:
+            with st.spinner("🎥 Movie is almost ready..."):
+                # Fallback if pre-loading was slow
+                time.sleep(5)
+                st.info("Tap the button again to play!")
 
     if st.button("🐾 Next Mission"):
-        st.session_state.mission_complete = False
+        # Reset everything for the next mission
         st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
+        st.session_state.mission_complete = False
+        st.session_state.video_data = None
         st.rerun()
