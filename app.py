@@ -11,17 +11,27 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 VOICE FUNCTION
+# 🎤 IMPROVED VOICE FUNCTION FOR IPAD
 def speak(text):
     clean_text = text.replace("'", "").replace('"', "")
+    # This JS version is more reliable for iOS/iPadOS
     components.html(f"""
         <script>
-            var msg = new SpeechSynthesisUtterance("{clean_text}");
-            msg.lang = 'en-US';
-            msg.rate = 0.9; 
-            window.speechSynthesis.speak(msg);
+            function playSpeech() {{
+                window.speechSynthesis.cancel(); // Stop any current speech
+                var msg = new SpeechSynthesisUtterance("{clean_text}");
+                msg.lang = 'en-US';
+                msg.rate = 0.9;
+                msg.pitch = 1.1;
+                window.speechSynthesis.speak(msg);
+            }}
+            // Force play on load for some browsers, but button is backup
+            playSpeech();
         </script>
-    """, height=0)
+        <button onclick="playSpeech()" style="background-color: #f9d905; border: none; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer;">
+            📢 Click to Hear Mission Again
+        </button>
+    """, height=50)
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -43,29 +53,36 @@ st.markdown("""
 
 st.write("")
 
-# --- STEP 1: MISSION BRIEFING ---
-mission_text = f"Today's Mission is {st.session_state.current_topic}. Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded."
+# --- STEP 1: INTERACTIVE MISSION BRIEFING ---
+topic = st.session_state.current_topic
+
+# Create the personalized story based on the topic
+if topic == "Swimming":
+    personal_story = "There is a resort which we are going to in Bali where you love to swim around the beach facing infinity pool! How was your day? "
+else:
+    personal_story = f"I know how much you love {topic}! It is one of your favorite things in the whole world. How was your day? "
+
+mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded!"
 
 st.markdown(f"""
 <div style="padding:20px; border-radius:15px; border:2px solid #00529b; background-color:#ffffff; margin-bottom:10px;">
-    <h3 style="color:#e21b22;">🐾 Mission: {st.session_state.current_topic}</h3>
+    <h3 style="color:#e21b22;">🐾 Mission: {topic}</h3>
     <p style="font-size:18px; color:#333;">{mission_text}</p>
 </div>
 """, unsafe_allow_html=True)
 
-if st.button("🔊 Wake Up Mission Control & Listen"):
-    speak(mission_text)
+# Trigger the voice
+speak(mission_text)
 
 # --- STEP 2: UPLOAD WRITING ---
 st.write("---")
-uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Upload your writing photo here", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    # INSTANT WIN - No complex AI scan that causes hiccups
     if st.button("🚀 SCAN WRITING & GET GIFT"):
         with st.spinner("🐾 Mission Control is scanning..."):
             time.sleep(2) 
-            congrats = f"Wow Aadya! I see your sentences about {st.session_state.current_topic}. You are a writing superstar! Click the button below for your surprise."
+            congrats = f"Wow Aadya! I see your sentences about {topic}. You are a writing superstar! Click the button below for your surprise."
             st.success(congrats)
             speak(congrats)
             st.session_state.mission_complete = True
@@ -78,21 +95,14 @@ if st.session_state.mission_complete:
         st.balloons()
         topic = st.session_state.current_topic
         
-        with st.spinner("🎨 Creating your gift..."):
+        with st.spinner("🎨 Creating your Paw Patrol style gift..."):
             try:
-                # This uses the new library to generate the image
-                prompt = f"A cute 3D Pixar style image of {topic} wearing a Paw Patrol uniform. Bright colors."
-                response = client.models.generate_content(
-                    model='gemini-2.0-flash-exp', 
-                    contents=prompt, 
-                    config=types.GenerateContentConfig(response_modalities=['IMAGE'])
-                )
-                for part in response.parts:
-                    if part.inline_data:
-                        st.image(part.as_image(), caption=f"Great job Aadya!")
+                # Use a specific prompt to make it extra cute
+                prompt = f"A cute 3D Pixar style image of {topic} wearing a Paw Patrol uniform and a gold crown. Vibrant colors, white background."
+                # Note: We are using a reliable image search fallback to ensure she ALWAYS gets a picture
+                st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"A Special {topic} for Aadya!")
             except:
-                # Backup if the AI image is too slow
-                st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"Surprise for Aadya!")
+                st.image(f"https://loremflickr.com/800/600/{topic}", caption=f"Great job Aadya!")
 
     if st.button("🐾 Start New Mission"):
         st.session_state.mission_complete = False
