@@ -1,9 +1,9 @@
 import streamlit as st
 import random
 import time
+import base64
 from google import genai
 from google.genai import types
-import streamlit.components.v1 as components
 
 # 1. API CONFIGURATION
 API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -11,27 +11,33 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 IMPROVED VOICE FUNCTION FOR IPAD
-def speak(text):
-    clean_text = text.replace("'", "").replace('"', "")
-    # This JS version is more reliable for iOS/iPadOS
-    components.html(f"""
-        <script>
-            function playSpeech() {{
-                window.speechSynthesis.cancel(); // Stop any current speech
-                var msg = new SpeechSynthesisUtterance("{clean_text}");
-                msg.lang = 'en-US';
-                msg.rate = 0.9;
-                msg.pitch = 1.1;
-                window.speechSynthesis.speak(msg);
-            }}
-            // Force play on load for some browsers, but button is backup
-            playSpeech();
-        </script>
-        <button onclick="playSpeech()" style="background-color: #f9d905; border: none; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer;">
-            📢 Click to Hear Mission Again
-        </button>
-    """, height=50)
+# 🎤 GEMINI HIGH-QUALITY VOICE FUNCTION
+def speak_gemini(text):
+    try:
+        # This tells Gemini to turn the text into a high-quality speech file
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                            voice_name="Puck" # "Puck" is a friendly, warm voice perfect for this
+                        )
+                    )
+                )
+            ),
+            contents=text,
+        )
+        
+        # Get the audio data
+        for part in response.parts:
+            if part.inline_data:
+                audio_base64 = base64.b64encode(part.inline_data.data).decode('utf-8')
+                audio_tag = f'<audio autoplay="true" src="data:audio/wav;base64,{audio_base64}">'
+                st.markdown(audio_tag, unsafe_allow_html=True)
+    except Exception as e:
+        st.error("Mission Control voice is offline, but the mission continues!")
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -55,8 +61,6 @@ st.write("")
 
 # --- STEP 1: INTERACTIVE MISSION BRIEFING ---
 topic = st.session_state.current_topic
-
-# Create the personalized story based on the topic
 if topic == "Swimming":
     personal_story = "There is a resort which we are going to in Bali where you love to swim around the beach facing infinity pool! How was your day? "
 else:
@@ -71,8 +75,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Trigger the voice
-speak(mission_text)
+# 🔊 CLICK TO HEAR THE REAL GEMINI VOICE
+if st.button("📢 Listen to Mission Control"):
+    with st.spinner("Mission Control is preparing the briefing..."):
+        speak_gemini(mission_text)
 
 # --- STEP 2: UPLOAD WRITING ---
 st.write("---")
@@ -84,7 +90,7 @@ if uploaded_file and not st.session_state.mission_complete:
             time.sleep(2) 
             congrats = f"Wow Aadya! I see your sentences about {topic}. You are a writing superstar! Click the button below for your surprise."
             st.success(congrats)
-            speak(congrats)
+            speak_gemini(congrats) # Also speaks the congrats in the nice voice
             st.session_state.mission_complete = True
             st.rerun()
 
@@ -94,15 +100,7 @@ if st.session_state.mission_complete:
     if st.button("🌟 CLICK FOR YOUR SURPRISE"):
         st.balloons()
         topic = st.session_state.current_topic
-        
-        with st.spinner("🎨 Creating your Paw Patrol style gift..."):
-            try:
-                # Use a specific prompt to make it extra cute
-                prompt = f"A cute 3D Pixar style image of {topic} wearing a Paw Patrol uniform and a gold crown. Vibrant colors, white background."
-                # Note: We are using a reliable image search fallback to ensure she ALWAYS gets a picture
-                st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"A Special {topic} for Aadya!")
-            except:
-                st.image(f"https://loremflickr.com/800/600/{topic}", caption=f"Great job Aadya!")
+        st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"A Special {topic} for Aadya!")
 
     if st.button("🐾 Start New Mission"):
         st.session_state.mission_complete = False
