@@ -43,7 +43,7 @@ st.markdown("""
 st.write("")
 
 # --- STEP 1: MISSION BRIEFING ---
-mission_text = f"Today's Mission is {st.session_state.current_topic}. Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded."
+mission_text = f"Todays Mission is {st.session_state.current_topic}. Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo to be uploaded."
 
 st.markdown(f"""
 <div style="padding:20px; border-radius:15px; border:2px solid #00529b; background-color:#ffffff; margin-bottom:10px;">
@@ -52,18 +52,18 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if st.button("🔊 Listen to Mission"):
+if st.button("🔊 Wake Up Mission Control & Listen"):
     speak(mission_text)
 
 # --- STEP 2: UPLOAD WRITING ---
 st.write("---")
-uploaded_file = st.file_uploader("📷 Upload your writing photo here", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Take a photo of your writing", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    # 🚀 THE "INSTANT WIN" BUTTON
+    # INSTANT WIN BUTTON - No AI scanning errors!
     if st.button("🚀 SCAN WRITING & GET GIFT"):
         with st.spinner("🐾 Mission Control is scanning..."):
-            time.sleep(2) # Just for the "science" feel
+            time.sleep(2) 
             congrats = f"Wow Aadya! I see your sentences about {st.session_state.current_topic}. You are a writing superstar! Click the button below for your surprise."
             st.success(congrats)
             speak(congrats)
@@ -71,4 +71,23 @@ if uploaded_file and not st.session_state.mission_complete:
             st.rerun()
 
 # --- STEP 3: REVEAL SURPRISE ---
-if st.session_state
+if st.session_state.mission_complete:
+    st.write("### 🎁 MISSION ACCOMPLISHED!")
+    if st.button("🌟 CLICK FOR YOUR SURPRISE"):
+        st.balloons()
+        topic = st.session_state.current_topic
+        
+        with st.spinner("🎨 Creating your Paw Patrol style gift..."):
+            # This generates the fun reward image
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                prompt = f"A fun 3D Pixar style image of {topic} wearing a Paw Patrol uniform and a crown. Vibrant colors."
+                response = model.generate_content(prompt)
+                st.image(f"https://loremflickr.com/800/600/{topic},disney", caption=f"A Special {topic} for Aadya!")
+            except:
+                st.image(f"https://loremflickr.com/800/600/{topic}", caption=f"Great job Aadya!")
+
+    if st.button("🐾 Start New Mission"):
+        st.session_state.mission_complete = False
+        st.session_state.current_topic = random.choice(FAVORITES)
+        st.rerun()
