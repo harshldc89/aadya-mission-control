@@ -11,9 +11,10 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 NATIVE AUDIO ENGINE (Works on all iPads)
+# 🎤 THE RELIABLE AUDIO ENGINE
 def speak_gemini(text):
     try:
+        # Generate high-quality Puck voice
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
@@ -29,11 +30,11 @@ def speak_gemini(text):
         
         for part in response.parts:
             if part.inline_data:
-                # This creates a standard iPad-compatible audio player
+                # This creates a standard iPad-compatible play bar
                 st.audio(part.inline_data.data, format="audio/wav")
-                st.caption("Tap the Play button above to hear Mission Control!")
+                st.caption("Tap the play button above to hear me!")
     except Exception as e:
-        st.error("Mission Control is a bit quiet. Please try again in a moment!")
+        st.error("Mission Control is a bit quiet. Let's keep going anyway!")
 
 # MISSION DATA
 FAVORITES = ["Leopard", "Whale", "Airplane", "Yoga", "Swimming", "Skating", "Dancing", "Ballet", "Bus", "Train", "Maldives", "Snorkeling", "Peppa Pig", "Numberblocks", "Alphablocks", "Sheriff Labrador", "Disney"]
@@ -43,7 +44,7 @@ if 'current_topic' not in st.session_state:
 if 'mission_complete' not in st.session_state:
     st.session_state.mission_complete = False
 
-# --- PAW PATROL STYLE LOGO HEADER ---
+# --- PAW PATROL STYLE LOGO ---
 st.markdown("""
     <div style="text-align: center; padding: 15px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905; box-shadow: 10px 10px 0px #00529b;">
         <h1 style="color: white; font-family: 'Arial Black', sans-serif; text-transform: uppercase; letter-spacing: 2px; margin: 0; -webkit-text-stroke: 1px #00529b;">
@@ -55,13 +56,15 @@ st.markdown("""
 
 st.write("")
 
-# --- STEP 1: INTERACTIVE BALI MISSION ---
+# --- STEP 1: PERSONALIZED MISSION ---
 topic = st.session_state.current_topic
-personal_story = "How was your day? "
-if topic == "Swimming":
-    personal_story = "There is a resort we are going to in Bali where you love to swim in the infinity pool facing the beach! How was your day? "
 
-mission_text = f"Aadya, your mission today is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best!"
+if topic == "Swimming":
+    personal_story = "There is a resort which we are going to in Bali where you love to swim around the beach facing infinity pool! How was your day? "
+else:
+    personal_story = f"I know how much you love {topic}! How was your day? "
+
+mission_text = f"Aadya, your mission is {topic}. {personal_story} Write 1 or 2 sentences about this in your notebook. All the best, I will wait for the photo!"
 
 st.markdown(f"""
 <div style="padding:20px; border-radius:15px; border:2px solid #00529b; background-color:#ffffff; margin-bottom:10px;">
@@ -70,17 +73,17 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# THE AUDIO BUTTON
+# Generate the Audio Player
 if st.button("📢 Get Voice Briefing"):
     with st.spinner("Preparing briefing..."):
         speak_gemini(mission_text)
 
 # --- STEP 2: UPLOAD ---
 st.write("---")
-uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Upload your writing", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
-    if st.button("🚀 SCAN WRITING & GET SURPRISE"):
+    if st.button("🚀 SCAN WRITING"):
         with st.spinner("🐾 Scanning..."):
             time.sleep(2) 
             congrats = f"Wow Aadya! You are a writing superstar! Click below for your surprise."
