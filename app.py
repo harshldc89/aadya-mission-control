@@ -43,7 +43,7 @@ FAVORITES = {
         "video_prompt": "A 3D animation of a pilot's view from a cockpit flying over a glowing city at night with city lights and stars, Pixar style, 5 seconds."
     },
     "Swimming": {
-        "hook": "You are at the Bali resort in the infinity pool. You decide to see how long you can float, and you notice something shiny at the bottom of the pool. What is it?",
+        "hook": "You are at the resort in Bali in the infinity pool. You decide to see how long you can float, and you notice something shiny at the bottom. What is it?",
         "video_prompt": "A realistic 3D scene of a beautiful infinity pool in Bali, water rippling, a small golden coin glowing at the bottom, Pixar style, 5 seconds."
     },
     "Chef": {
@@ -52,58 +52,66 @@ FAVORITES = {
     }
 }
 
-# --- INITIALIZE AND BACKGROUND VIDEO START ---
+# --- INITIALIZE AND BACKGROUND VIDEO ---
 if 'current_topic' not in st.session_state:
     st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
     st.session_state.mission_complete = False
     st.session_state.video_ready = None
 
-# START GENERATING VIDEO IMMEDIATELY (Hidden from Aadya)
 if st.session_state.video_ready is None:
     try:
         topic = st.session_state.current_topic
-        # This runs in the background while she is reading/writing
-        video_res = client.models.generate_content(
-            model='veo', 
-            contents=FAVORITES[topic]['video_prompt']
-        )
+        video_res = client.models.generate_content(model='veo', contents=FAVORITES[topic]['video_prompt'])
         for part in video_res.parts:
             if part.inline_data:
                 st.session_state.video_ready = part.inline_data.data
     except:
         pass
 
-# --- DARK MODE STYLE ---
+# --- 🎨 THE COLOR FIX (FORCING READABILITY) ---
 st.markdown("""
     <style>
-        .mission-box {
-            padding: 25px; border-radius: 15px; border: 3px solid #f9d905; 
-            background-color: rgba(255, 255, 255, 0.15); margin-top: 20px;
+        /* Force the background of the app to be a dark navy so the red/yellow pops */
+        .stApp {
+            background-color: #002d5a;
         }
-        .step-text { color: white !important; font-size: 22px; margin-bottom: 15px; line-height: 1.4; }
+        /* The Mission Card - Solid White Background so text is ALWAYS readable */
+        .mission-card {
+            padding: 25px; 
+            border-radius: 15px; 
+            border: 6px solid #f9d905; 
+            background-color: #ffffff; 
+            margin-top: 20px;
+            box-shadow: 10px 10px 0px #e21b22;
+        }
+        .mission-header { color: #e21b22 !important; font-size: 26px; font-weight: bold; margin-bottom: 15px; }
+        .mission-text { color: #002d5a !important; font-size: 22px; line-height: 1.4; margin-bottom: 10px; }
+        .step-label { color: #00529b !important; font-weight: bold; }
     </style>
-    <div style="text-align: center; padding: 15px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905;">
-        <h1 style="color: white; margin: 0;">🐾 MISSION CONTROL 🐾</h1>
+    
+    <div style="text-align: center; padding: 20px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905;">
+        <h1 style="color: white; margin: 0; font-family: sans-serif;">🐾 MISSION CONTROL 🐾</h1>
     </div>
     """, unsafe_allow_html=True)
 
-# --- THE CLEAR MISSION ---
+# --- THE MISSION CARD ---
 topic = st.session_state.current_topic
 story = FAVORITES[topic]
 
 st.markdown(f"""
-<div class="mission-box">
-    <h2 style="color:#f9d905; margin-top:0;">🌟 Your Mission:</h2>
-    <p class="step-text"><b>Step 1. Imagine:</b> {story['hook']}</p>
-    <p class="step-text"><b>Step 2. Write:</b> Finish the story in your notebook with 2 sentences!</p>
+<div class="mission-card">
+    <div class="mission-header">🌟 Your Mission: {topic}</div>
+    <p class="mission-text"><span class="step-label">Step 1. Imagine:</span> {story['hook']}</p>
+    <p class="mission-text"><span class="step-label">Step 2. Write:</span> Finish the story in your notebook with 2 sentences!</p>
 </div>
 """, unsafe_allow_html=True)
 
 speak(f"Aadya, Mission Control here! Imagine this: {story['hook']}. Now, write the ending in your notebook. I can't wait to see!")
 
-# --- UPLOAD ---
-st.write("---")
-uploaded_file = st.file_uploader("📷 Mission finished? Take a photo!", type=['png', 'jpg', 'jpeg'])
+# --- UPLOAD SECTION ---
+st.write("")
+st.markdown("<h4 style='color: white;'>📷 Upload your writing photo:</h4>", unsafe_allow_html=True)
+uploaded_file = st.file_uploader("", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
     if st.button("🚀 SUBMIT TO MISSION CONTROL"):
@@ -118,11 +126,11 @@ if st.session_state.mission_complete:
     if st.button("🎬 WATCH YOUR STORY MOVIE"):
         if st.session_state.video_ready:
             st.video(st.session_state.video_ready)
-            st.success("🎬 You finished the story! Great writing, Aadya!")
+            st.success("🎬 Great job, Aadya!")
         else:
-            with st.spinner("🎥 Movie is almost ready..."):
+            with st.spinner("🎥 Movie is arriving..."):
                 time.sleep(5)
-                st.info("Tap the button one more time to play your movie!")
+                st.info("Tap again to play your movie!")
 
     if st.button("🐾 Next Mission"):
         st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
