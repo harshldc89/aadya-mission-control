@@ -11,10 +11,7 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🕯️ STAY AWAKE SCRIPT
-components.html("<script>navigator.wakeLock.request('screen');</script>", height=0)
-
-# 🎤 VOICE ENGINE
+# 🎤 VOICE ENGINE (iPad Stable)
 def speak(text):
     clean_text = text.replace("'", "").replace('"', "")
     components.html(f"""
@@ -32,7 +29,7 @@ def speak(text):
         </script>
     """, height=80)
 
-# REALISTIC MISSION DATA
+# REAL-LIFE CREATIVE MISSIONS
 FAVORITES = {
     "Leopard": {
         "hook": "You are a wildlife photographer in the jungle. You just spotted a leopard hiding in the tall grass, watching a colorful bird. What happens next?",
@@ -49,64 +46,42 @@ FAVORITES = {
     "Architecture": {
         "hook": "You are an architect building a house made entirely of glass and wood. It has a secret room that only you know about. What is in the secret room?",
         "video_prompt": "A beautiful 3D modern glass house in a forest, the lights inside turn on, showing a cozy secret library, Pixar style, 5 seconds."
-    },
-    "Chef": {
-        "hook": "You are a head chef making a giant pizza for a street party. You have all the cheese and sauce, but you forgot one very special topping. What do you add?",
-        "video_prompt": "A 3D cartoon chef tossing a giant pizza dough in the air in a sunny Italian kitchen, flour puffing, Pixar style, 5 seconds."
-    },
-    "Astronaut": {
-        "hook": "You are on the Moon looking back at Earth. It looks like a small blue marble. You find a strange rock that glows in the dark. What do you do with it?",
-        "video_prompt": "A 3D astronaut on the moon surface holding a glowing purple moon rock, Earth visible in the black sky behind them, Pixar style, 5 seconds."
     }
 }
 
-# --- INITIALIZE AND PRE-LOAD ---
+# --- INITIALIZE SESSION ---
 if 'current_topic' not in st.session_state:
     st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
+if 'mission_complete' not in st.session_state:
     st.session_state.mission_complete = False
-    st.session_state.video_data = None
 
-# PRE-LOAD VIDEO
-if st.session_state.video_data is None:
-    topic = st.session_state.current_topic
-    try:
-        video_res = client.models.generate_content(
-            model='veo', 
-            contents=FAVORITES[topic]['video_prompt']
-        )
-        for part in video_res.parts:
-            if part.inline_data:
-                st.session_state.video_data = part.inline_data.data
-    except:
-        pass
-
-# --- HEADER (Fixed for Dark Mode) ---
+# --- DARK MODE STYLING ---
 st.markdown("""
     <style>
         .mission-box {
             padding: 25px; border-radius: 15px; border: 3px solid #f9d905; 
-            background-color: rgba(255, 255, 255, 0.1); margin-top: 20px;
+            background-color: rgba(255, 255, 255, 0.15); margin-top: 20px;
         }
         .step-text { color: white !important; font-size: 22px; margin-bottom: 15px; line-height: 1.4; }
     </style>
     <div style="text-align: center; padding: 15px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905;">
-        <h1 style="color: white; margin: 0; letter-spacing: 1px;">🐾 AADYA MISSION CONTROL 🐾</h1>
+        <h1 style="color: white; margin: 0;">🐾 MISSION CONTROL 🐾</h1>
     </div>
     """, unsafe_allow_html=True)
 
-# --- ONE CLEAR MISSION ---
+# --- THE MISSION ---
 topic = st.session_state.current_topic
 story = FAVORITES[topic]
 
 st.markdown(f"""
 <div class="mission-box">
-    <h2 style="color:#f9d905; margin-top:0;">🌟 Today's Creative Mission:</h2>
+    <h2 style="color:#f9d905; margin-top:0;">🌟 Your Mission:</h2>
     <p class="step-text"><b>Step 1. Imagine:</b> {story['hook']}</p>
-    <p class="step-text"><b>Step 2. Write:</b> Finish this story in your notebook with 2 sentences!</p>
+    <p class="step-text"><b>Step 2. Write:</b> Finish the story in your notebook with 2 sentences!</p>
 </div>
 """, unsafe_allow_html=True)
 
-speak(f"Aadya, Mission Control here! Imagine this: {story['hook']}. Now, write the ending in your notebook. I can't wait to see what happens!")
+speak(f"Aadya, Mission Control here! Imagine this: {story['hook']}. Now, write the ending in your notebook. I can't wait to see!")
 
 # --- UPLOAD ---
 st.write("---")
@@ -118,21 +93,25 @@ if uploaded_file and not st.session_state.mission_complete:
         st.session_state.mission_complete = True
         st.rerun()
 
-# --- REVEAL SAVED MOVIE ---
+# --- REVEAL MOVIE ---
 if st.session_state.mission_complete:
     st.markdown("<h3 style='color:#f9d905; text-align:center;'>🎉 MISSION ACCOMPLISHED!</h3>", unsafe_allow_html=True)
     
     if st.button("🎬 WATCH YOUR STORY MOVIE"):
-        if st.session_state.video_data:
-            st.video(st.session_state.video_data)
-            st.success("🎬 Great writing, Aadya! You finished the story!")
-        else:
-            with st.spinner("🎥 Movie is almost ready..."):
-                time.sleep(5)
-                st.info("Tap the button one more time to play!")
+        with st.spinner("🎥 Mission Control is filming your story ending..."):
+            try:
+                # Generate video ONLY when button is clicked to avoid startup errors
+                video_res = client.models.generate_content(
+                    model='veo', 
+                    contents=story['video_prompt']
+                )
+                for part in video_res.parts:
+                    if part.inline_data:
+                        st.video(part.inline_data.data)
+            except:
+                st.info("The movie camera is warming up. Tap one more time!")
 
-    if st.button("🐾 Start New Mission"):
+    if st.button("🐾 Next Mission"):
         st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
         st.session_state.mission_complete = False
-        st.session_state.video_data = None
         st.rerun()
