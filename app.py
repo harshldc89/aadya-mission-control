@@ -11,7 +11,10 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🎤 VOICE ENGINE (iPad Stable)
+# 🕯️ STAY AWAKE SCRIPT
+components.html("<script>navigator.wakeLock.request('screen');</script>", height=0)
+
+# 🎤 VOICE ENGINE
 def speak(text):
     clean_text = text.replace("'", "").replace('"', "")
     components.html(f"""
@@ -36,26 +39,41 @@ FAVORITES = {
         "video_prompt": "A realistic 3D Pixar style leopard crouching in tall jungle grass, blinking its eyes and twitching its tail, looking at a tropical bird, 5 seconds."
     },
     "Airplane": {
-        "hook": "You are the pilot of a big airplane. You are flying over a city at night and see millions of tiny lights below. Where are you landing your passengers?",
+        "hook": "You are the pilot of a big airplane flying over a glowing city at night. You see millions of tiny lights below. Where are you landing your passengers?",
         "video_prompt": "A 3D animation of a pilot's view from a cockpit flying over a glowing city at night with city lights and stars, Pixar style, 5 seconds."
     },
     "Swimming": {
         "hook": "You are at the Bali resort in the infinity pool. You decide to see how long you can float, and you notice something shiny at the bottom of the pool. What is it?",
         "video_prompt": "A realistic 3D scene of a beautiful infinity pool in Bali, water rippling, a small golden coin glowing at the bottom, Pixar style, 5 seconds."
     },
-    "Architecture": {
-        "hook": "You are an architect building a house made entirely of glass and wood. It has a secret room that only you know about. What is in the secret room?",
-        "video_prompt": "A beautiful 3D modern glass house in a forest, the lights inside turn on, showing a cozy secret library, Pixar style, 5 seconds."
+    "Chef": {
+        "hook": "You are a head chef making a giant pizza for a street party. You have the dough and sauce, but you forgot one very special topping. What is it?",
+        "video_prompt": "A 3D cartoon chef tossing a giant pizza dough in the air in a sunny Italian kitchen, flour puffing, Pixar style, 5 seconds."
     }
 }
 
-# --- INITIALIZE SESSION ---
+# --- INITIALIZE AND BACKGROUND VIDEO START ---
 if 'current_topic' not in st.session_state:
     st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
-if 'mission_complete' not in st.session_state:
     st.session_state.mission_complete = False
+    st.session_state.video_ready = None
 
-# --- DARK MODE STYLING ---
+# START GENERATING VIDEO IMMEDIATELY (Hidden from Aadya)
+if st.session_state.video_ready is None:
+    try:
+        topic = st.session_state.current_topic
+        # This runs in the background while she is reading/writing
+        video_res = client.models.generate_content(
+            model='veo', 
+            contents=FAVORITES[topic]['video_prompt']
+        )
+        for part in video_res.parts:
+            if part.inline_data:
+                st.session_state.video_ready = part.inline_data.data
+    except:
+        pass
+
+# --- DARK MODE STYLE ---
 st.markdown("""
     <style>
         .mission-box {
@@ -69,7 +87,7 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-# --- THE MISSION ---
+# --- THE CLEAR MISSION ---
 topic = st.session_state.current_topic
 story = FAVORITES[topic]
 
@@ -93,25 +111,21 @@ if uploaded_file and not st.session_state.mission_complete:
         st.session_state.mission_complete = True
         st.rerun()
 
-# --- REVEAL MOVIE ---
+# --- REVEAL MOVIE REWARD ---
 if st.session_state.mission_complete:
     st.markdown("<h3 style='color:#f9d905; text-align:center;'>🎉 MISSION ACCOMPLISHED!</h3>", unsafe_allow_html=True)
     
     if st.button("🎬 WATCH YOUR STORY MOVIE"):
-        with st.spinner("🎥 Mission Control is filming your story ending..."):
-            try:
-                # Generate video ONLY when button is clicked to avoid startup errors
-                video_res = client.models.generate_content(
-                    model='veo', 
-                    contents=story['video_prompt']
-                )
-                for part in video_res.parts:
-                    if part.inline_data:
-                        st.video(part.inline_data.data)
-            except:
-                st.info("The movie camera is warming up. Tap one more time!")
+        if st.session_state.video_ready:
+            st.video(st.session_state.video_ready)
+            st.success("🎬 You finished the story! Great writing, Aadya!")
+        else:
+            with st.spinner("🎥 Movie is almost ready..."):
+                time.sleep(5)
+                st.info("Tap the button one more time to play your movie!")
 
     if st.button("🐾 Next Mission"):
         st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
         st.session_state.mission_complete = False
+        st.session_state.video_ready = None
         st.rerun()
