@@ -11,10 +11,7 @@ client = genai.Client(api_key=API_KEY)
 
 st.set_page_config(page_title="Aadya's Mission Control", page_icon="🐾")
 
-# 🕯️ STAY AWAKE SCRIPT
-components.html("<script>navigator.wakeLock.request('screen');</script>", height=0)
-
-# 🎤 VOICE ENGINE
+# 🎤 VOICE ENGINE (iPad Stable)
 def speak(text):
     clean_text = text.replace("'", "").replace('"', "")
     components.html(f"""
@@ -32,75 +29,88 @@ def speak(text):
         </script>
     """, height=80)
 
-# MISSIONS
+# REAL-LIFE CREATIVE MISSIONS
 FAVORITES = {
-    "Leopard": {"hook": "You are a wildlife photographer. You spotted a leopard in the tall grass watching a bird. What happens next?", "v_prompt": "3D Pixar style leopard in jungle grass, 5s."},
-    "Airplane": {"hook": "You are a pilot flying over a city at night. Where are you landing your passengers?", "v_prompt": "3D Pixar pilot cockpit view over city lights, 5s."},
-    "Swimming": {"hook": "You are in a Bali infinity pool and find something shiny at the bottom. What is it?", "v_prompt": "3D Pixar Bali infinity pool, glowing coin at bottom, 5s."},
-    "Architecture": {"hook": "You are an architect building a glass house with a secret library. What is inside?", "v_prompt": "3D Pixar modern glass house in forest, cozy lights, 5s."}
+    "Wildlife Photographer": {
+        "hook": "A cheetah is resting in the shade of a tree. It looks right at you with big yellow eyes! What do you do?",
+        "selfie_prompt": "A friendly 3D Pixar style image of 6 year old Aadya smiling while taking a photo of a curious cheetah resting under a tree. Vibrant, happy, safe for kids."
+    },
+    "Pilot": {
+        "hook": "Your plane is soaring through fluffy, rainbow clouds. Where are you landing your passengers today?",
+        "selfie_prompt": "A happy 3D Pixar style image of 6 year old Aadya in a pilot uniform, sitting in the cockpit of a flying airplane, smiling and waving. Rainbow clouds outside."
+    },
+    "Architect": {
+        "hook": "You are building a house made of glowing glass bricks in a forest. What does the secret room look like?",
+        "selfie_prompt": "A joyful 3D Pixar style image of 6 year old Aadya holding a model of a glowing glass house in a magical forest at night. Safe and friendly."
+    },
+    "Chef": {
+        "hook": "You are making a giant pizza for a street party. What is the very last ingredient you add to make it yummy?",
+        "selfie_prompt": "A 3D Pixar style image of 6 year old Aadya wearing a chef hat, smiling while adding toppings to a massive pizza in a sunny Italian kitchen."
+    }
 }
 
-# --- INITIALIZE THEME ROTATION ---
+# --- INITIALIZE THEME AND PRE-GENERATE IMAGE ---
 if 'theme_cycle' not in st.session_state:
-    st.session_state.theme_cycle = "Gold" # Starts with Gold
+    st.session_state.theme_cycle = "Gold"
 if 'current_topic' not in st.session_state:
     st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
     st.session_state.mission_complete = False
-    st.session_state.video_ready = None
+    st.session_state.reward_image = None
 
-# PRE-LOAD VIDEO
-if st.session_state.video_ready is None:
+# 🚀 PRE-LOAD SURPRISE IMAGE
+if st.session_state.reward_image is None:
     try:
         topic = st.session_state.current_topic
-        video_res = client.models.generate_content(model='veo', contents=FAVORITES[topic]['v_prompt'])
-        for part in video_res.parts:
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-exp', 
+            contents=FAVORITES[topic]['selfie_prompt'], 
+            config=types.GenerateContentConfig(response_modalities=['IMAGE'])
+        )
+        for part in response.parts:
             if part.inline_data:
-                st.session_state.video_ready = part.inline_data.data
-    except: pass
+                st.session_state.reward_image = part.as_image()
+    except:
+        pass
 
-# --- 🎨 THEME LOGIC ---
+# --- 🎨 THEME ROTATION STYLING ---
 if st.session_state.theme_cycle == "Gold":
-    bg_color = "#001f3f"      # Navy
-    card_bg = "#FFD700"       # Gold
-    border_color = "#C0C0C0"  # Silver
-    text_color = "#000000"    # Black
-    header_text = "🌟 GOLDEN MISSION"
+    st_bg = "#001f3f"; st_card_bg = "#FFD700"; st_border = "#C0C0C0"; st_text = "#000000"
+    header_title = "🌟 GOLDEN MISSION"
 else:
-    bg_color = "#f0f2f6"      # Soft White
-    card_bg = "linear-gradient(to right, #ff9999, #ffcc99, #ffff99, #ccff99, #99ffff, #99ccff, #cc99ff)" # Rainbow
-    border_color = "#ffffff"  # White
-    text_color = "#1a1a1a"    # Deep Charcoal
-    header_text = "🌈 RAINBOW MISSION"
+    st_bg = "#f0f2f6"; st_card_bg = "linear-gradient(to right, #ff9999, #ffcc99, #ffff99, #ccff99, #99ffff, #99ccff, #cc99ff)"; st_border = "#ffffff"; st_text = "#1a1a1a"
+    header_title = "🌈 RAINBOW MISSION"
 
 st.markdown(f"""
     <style>
-        .stApp {{ background-color: {bg_color}; }}
-        .header-box {{ text-align: center; padding: 20px; background-color: #e21b22; border-radius: 15px; border: 5px solid #f9d905; }}
+        .stApp {{ background-color: {st_bg}; }}
+        .header-box {{ text-align: center; padding: 15px; background-color: #e21b22; border-radius: 15px; border: 5px solid {st_border}; }}
         .mission-card {{ 
-            padding: 25px; border-radius: 15px; border: 6px solid {border_color}; 
-            background: {card_bg}; margin-top: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+            padding: 25px; border-radius: 15px; border: 6px solid {st_border}; 
+            background: {st_card_bg}; margin-top: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
         }}
-        .mission-header {{ color: {text_color} !important; font-size: 26px; font-weight: bold; margin-bottom: 15px; }}
-        .mission-text {{ color: {text_color} !important; font-size: 22px; line-height: 1.4; font-weight: 500; }}
+        .mission-header {{ color: {st_text} !important; font-size: 26px; font-weight: bold; margin-bottom: 10px; }}
+        .mission-text {{ color: {st_text} !important; font-size: 22px; line-height: 1.4; font-weight: 500; }}
     </style>
     <div class="header-box"><h1 style="color: white; margin: 0;">🐾 MISSION CONTROL 🐾</h1></div>
     """, unsafe_allow_html=True)
 
+# --- THE MISSION CARD ---
 topic = st.session_state.current_topic
 story = FAVORITES[topic]
 
 st.markdown(f"""
 <div class="mission-card">
-    <div class="mission-header">{header_text}: {topic}</div>
+    <div class="mission-header">{header_title}: {topic}</div>
     <p class="mission-text"><b>Step 1. Imagine:</b> {story['hook']}</p>
-    <p class="mission-text"><b>Step 2. Write:</b> Finish the story in your notebook!</p>
+    <p class="mission-text"><b>Step 2. Write:</b> Finish the story in your notebook with 2 sentences!</p>
 </div>
 """, unsafe_allow_html=True)
 
-speak(f"Aadya, Mission Control here! Today is a {st.session_state.theme_cycle} mission. Imagine this: {story['hook']}. Write the ending now!")
+speak(f"Aadya, Mission Control here! Your mission is {topic}. Imagine this: {story['hook']}. Now, write the ending in your notebook!")
 
+# --- UPLOAD ---
 st.write("")
-uploaded_file = st.file_uploader("📷 Upload writing photo", type=['png', 'jpg', 'jpeg'])
+uploaded_file = st.file_uploader("📷 Upload your writing photo:", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file and not st.session_state.mission_complete:
     if st.button("🚀 SUBMIT TO MISSION CONTROL"):
@@ -108,19 +118,25 @@ if uploaded_file and not st.session_state.mission_complete:
         st.session_state.mission_complete = True
         st.rerun()
 
+# --- REVEAL SURPRISE ---
 if st.session_state.mission_complete:
-    st.markdown(f"<h3 style='color:white; text-align:center;'>🎉 MISSION ACCOMPLISHED!</h3>", unsafe_allow_html=True)
-    if st.button("🎬 WATCH YOUR MOVIE"):
-        if st.session_state.video_ready:
-            st.video(st.session_state.video_ready)
+    st.markdown("<h3 style='color:white; text-align:center;'>🎉 MISSION ACCOMPLISHED!</h3>", unsafe_allow_html=True)
+    
+    # --- UPDATED BUTTON NAME ---
+    if st.button("🌟 SHOW SURPRISE"):
+        if st.session_state.reward_image:
+            st.image(st.session_state.reward_image, caption="Aadya's Creative Adventure! 3D Pixar Style")
+            st.success("Great writing today, Aadya!")
         else:
-            with st.spinner("🎥 Movie is arriving..."):
-                time.sleep(5); st.info("Tap again to play!")
+            with st.spinner("One moment, getting your surprise ready..."):
+                time.sleep(3)
+                st.info("Tap 'Show Surprise' again to see your picture!")
 
     if st.button("🐾 Next Mission"):
-        # TOGGLE THEME FOR NEXT TIME
+        # Cycle Theme
         st.session_state.theme_cycle = "Rainbow" if st.session_state.theme_cycle == "Gold" else "Gold"
+        # Reset Mission
         st.session_state.current_topic = random.choice(list(FAVORITES.keys()))
         st.session_state.mission_complete = False
-        st.session_state.video_ready = None
+        st.session_state.reward_image = None
         st.rerun()
